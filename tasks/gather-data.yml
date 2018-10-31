@@ -1,0 +1,36 @@
+---
+
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: articulate/jq
+    tag: latest
+
+inputs:
+- name: sonarqube-json
+
+outputs:
+- name: findings
+
+run:
+  path: sh
+  args:
+  - -ec
+  - |
+    CODE_SMELLS=$(cat sonarqube-json/result.json | jq -r '.component.measures[] | select(.metric=="code_smells") | .value')
+    VULNERABILITIES=$(cat sonarqube-json/result.json | jq -r '.component.measures[] | select(.metric=="vulnerabilities") | .value')
+    BUGS=$(cat sonarqube-json/result.json | jq -r '.component.measures[] | select(.metric=="bugs") | .value')
+
+    echo "Code Smells: $CODE_SMELLS"
+    echo "Vulnerabilities: $VULNERABILITIES"
+    echo "Bugs: $BUGS"
+
+    echo "$CODE_SMELLS" > findings/code_smells
+    echo "$VULNERABILITIES" > findings/vulnerabilities
+    echo "$BUGS" > findings/bugs
+
+    if [ "$CODE_SMELLS$VULNERABILITIES$BUGS" -ne "000" ]; then
+    exit 1
+    fi
